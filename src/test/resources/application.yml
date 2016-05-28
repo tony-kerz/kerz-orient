@@ -1,0 +1,9 @@
+logging:
+  level:
+    org.springframework: DEBUG
+    com.kerz: DEBUG
+
+geocoder:
+  uri: https://search.mapzen.com/v1/search
+  key: search-ND7BVJ
+  country: USA
