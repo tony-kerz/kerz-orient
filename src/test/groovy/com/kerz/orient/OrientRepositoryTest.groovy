@@ -46,13 +46,13 @@ class OrientRepositoryTest {
     vertexTypes.each {
       personRepository.createVertexType(it.simpleName)
     }
-    //personRepository.submitSql('create property person.location embedded OPoint')
+    personRepository.submitSql('create property person.location embedded OPoint')
   }
 
   @After
   void tearDown() {
     vertexTypes.each {
-      //personRepository.dropVertexType(it.simpleName)
+      personRepository.dropVertexType(it.simpleName)
     }
   }
 
