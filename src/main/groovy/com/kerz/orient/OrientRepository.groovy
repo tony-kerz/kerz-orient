@@ -20,7 +20,7 @@ import com.tinkerpop.blueprints.Element
 import com.tinkerpop.blueprints.impls.orient.OrientGraph
 
 @Repository
-class OrientRepository<T extends GElement, ID extends Serializable> implements PagingAndSortingRepository<T, ID> {
+class OrientRepository<T, ID extends Serializable> implements PagingAndSortingRepository<T, ID> {
   static Log log = LogFactory.getLog(OrientRepository)
   
   Class<T> clazz
@@ -37,9 +37,6 @@ class OrientRepository<T extends GElement, ID extends Serializable> implements P
     log.debug("<init>: this=${this.class}, clazz=$clazz")
     className = clazz.simpleName
   }
-  
-  // eclipse issue...
-  T save(T){} 
     
   @Override
   public Iterable<T> findAll(Sort sort) {
@@ -51,7 +48,7 @@ class OrientRepository<T extends GElement, ID extends Serializable> implements P
   int sortComparator(Sort sort, a, b) {
     int result
     sort.any {
-      log.debug("sort:each: prop=$it.property, asc=$it.ascending")
+      log.trace("sort:each: prop=$it.property, asc=$it.ascending")
       if (it.ascending) {
         return result = a[it.property] <=> b[it.property]
       } else {
@@ -85,7 +82,7 @@ class OrientRepository<T extends GElement, ID extends Serializable> implements P
     entity.properties.each { prop, val ->
       MetaProperty metaProp = entity.class.metaClass.getMetaProperty(prop)
       boolean shouldSave = shouldSave(metaProp)
-      log.debug("save: save=[$shouldSave], prop=[$prop], type=[$metaProp.type], val=[$val]")
+      log.trace("save: save=[$shouldSave], prop=[$prop], type=[$metaProp.type], val=[$val]")
       if (shouldSave && val) {
         entity.element.setProperty(prop, toStorage(metaProp, val))
       }
@@ -153,48 +150,16 @@ class OrientRepository<T extends GElement, ID extends Serializable> implements P
     Assert.notNull(element, 'element required')
     def entity = clazz.newInstance()
     entity.element = element
-    log.debug("reconstitute: entity=[$className], id=[$element.id]")
+    log.trace("reconstitute: entity=[$className], id=[$element.id]")
     element.getPropertyKeys().each {
       def val = element.getProperty(it)
-      log.debug("reconstitute: key=[$it], val=[$val]")
+      log.trace("reconstitute: key=[$it], val=[$val]")
       MetaProperty metaProp = entity.class.metaClass.getMetaProperty(it)
       entity[it] = fromStorage(metaProp.type, val)
     }
     entity
   }
   
-  boolean classExists(name) {
-    g.getRawGraph().getMetadata().getSchema().existsClass(name)
-  }
-
-  void createVertexType(name) {
-    if (!classExists(name)) {
-      log.debug("create-vertex-type: name=$name")
-      g.createVertexType(name)
-    }
-  }
-
-  void createEdgeType(name) {
-    if (!classExists(name)) {
-      log.debug("create-edge-type: name=$name")
-      g.createEdgeType(name)
-    }
-  }
-
-  void dropVertexType(name) {
-    if (classExists(name)) {
-      log.debug("drop-vertex-type: name=$name")
-      g.dropVertexType(name)
-    }
-  }
-
-  void dropEdgeType(name) {
-    if (classExists(name)) {
-      log.debug("drop-edge-type: name=$name")
-      g.dropEdgeType(name)
-    }
-  }
-
   static boolean shouldSave(MetaProperty metaProp) {
     //!(metaProp.name in nameExcludes) && (metaProp.type.isPrimitive() || metaProp.type in classIncludes)
     !(metaProp.name in nameExcludes)
@@ -215,7 +180,7 @@ class OrientRepository<T extends GElement, ID extends Serializable> implements P
     entity.properties.each { k, v ->
       MetaProperty metaProp = entity.class.metaClass.getMetaProperty(k)
       boolean should = shouldSave(metaProp)
-      log.debug("as-document: should=$should, k=$k, v=$v, type=$metaProp.type")
+      log.trace("as-document: should=$should, k=$k, v=$v, type=$metaProp.type")
       if (should && v) {
         doc.field(k, v)
       }
@@ -224,12 +189,12 @@ class OrientRepository<T extends GElement, ID extends Serializable> implements P
   }
   
   static def fromStorage(Class clazz, val) {
-    log.debug("from-storage: clazz=$clazz, val=$val")
+    log.trace("from-storage: clazz=$clazz, val=$val")
     if (val instanceof ODocument) {
       def instance = clazz.newInstance()
       val.toMap().each {k, v -> 
         boolean should = shouldReconstituteProp(k)
-        log.debug("from-storage: should=$should, k=$k, v=$v")
+        log.trace("from-storage: should=$should, k=$k, v=$v")
         if (should) {
           instance[k] = v
         }
@@ -242,9 +207,5 @@ class OrientRepository<T extends GElement, ID extends Serializable> implements P
   
   static def shouldReconstituteProp(String prop) {
     !(prop in ['@rid', '@class'])
-  }
-  
-  void submitSql(String sql) {
-    g.command(new OCommandSQL(sql)).execute()
   }
 }
