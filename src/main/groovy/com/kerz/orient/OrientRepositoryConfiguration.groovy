@@ -39,6 +39,11 @@ class OrientRepositoryConfiguration {
     log.debug("props=${props}")
     new OrientGraphFactory("remote:$props.host/$props.db", props.user, props.password)
   }
+  
+  @Bean
+  OrientHelper orientHelper() {
+    new OrientHelper()
+  }
 }
 
 

@@ -33,26 +33,29 @@ class OrientRepositoryTest {
   //def vertexTypes = [Widget, Whatsit, Person]
   def vertexTypes = [Person]
 
-//  @Autowired
-//  OrientRepository orientRepository
   @Autowired
   OrientGraph g
+  
+  @Autowired
+  OrientHelper oHelper
   
   @Autowired
   PersonRepository personRepository
 
   @Before
   void setUp() {
-    vertexTypes.each {
-      personRepository.createVertexType(it.simpleName)
-    }
-    personRepository.submitSql('create property person.location embedded OPoint')
+//    vertexTypes.each {
+//      oHelper.createVertexType(it.simpleName)
+//    }
+    oHelper.submitSql('drop class person unsafe')
+    oHelper.submitSql('create class Person extends V')
+    oHelper.submitSql('create property person.point embedded OPoint')
   }
 
   @After
   void tearDown() {
     vertexTypes.each {
-      personRepository.dropVertexType(it.simpleName)
+      //oHelper.dropVertexType(it.simpleName)
     }
   }
 
@@ -97,7 +100,8 @@ class OrientRepositoryTest {
     assertEquals(peep3, people[2])
     assertEquals(peep2, people[3])
     
-    personRepository.g.commit()
+    personRepository.deleteAll()
+    assertEquals(0, personRepository.count())
   }
   
   @Test
@@ -130,6 +134,9 @@ class OrientRepositoryTest {
     assertEquals(peep5, page.content[0])
     
     assertNull(page.nextPageable())
+    
+    personRepository.deleteAll()
+    assertEquals(0, personRepository.count())
   }
   
   @Test
