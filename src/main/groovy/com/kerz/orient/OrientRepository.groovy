@@ -2,8 +2,8 @@ package com.kerz.orient
 
 import java.lang.reflect.ParameterizedType
 
-import org.apache.commons.logging.Log
-import org.apache.commons.logging.LogFactory
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
@@ -13,15 +13,13 @@ import org.springframework.data.repository.PagingAndSortingRepository
 import org.springframework.stereotype.Repository
 import org.springframework.util.Assert
 
-import com.kerz.orient.domain.GElement
 import com.orientechnologies.orient.core.record.impl.ODocument
-import com.orientechnologies.orient.core.sql.OCommandSQL
 import com.tinkerpop.blueprints.Element
 import com.tinkerpop.blueprints.impls.orient.OrientGraph
 
 @Repository
 class OrientRepository<T, ID extends Serializable> implements PagingAndSortingRepository<T, ID> {
-  static Log log = LogFactory.getLog(OrientRepository)
+  static Logger log = LoggerFactory.getLogger(OrientRepository)
   
   Class<T> clazz
   String className

@@ -2,8 +2,8 @@ package com.kerz.orient
 
 import groovy.transform.CompileStatic
 
-import org.apache.commons.logging.Log
-import org.apache.commons.logging.LogFactory
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -21,8 +21,8 @@ class OrientRepositoryConfiguration {
     Gremlin.load()
   }
 
-  static Log log = LogFactory.getLog(OrientRepositoryConfiguration)
-
+  static Logger log = LoggerFactory.getLogger(OrientRepositoryConfiguration)
+  
   @Autowired
   OrientProperties props
 
