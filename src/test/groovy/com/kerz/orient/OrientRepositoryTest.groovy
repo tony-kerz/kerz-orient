@@ -17,6 +17,7 @@ import org.springframework.data.domain.Sort
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 
 import com.kerz.orient.dao.PersonRepository
+import com.kerz.orient.dao.PersonSqlRepository
 import com.kerz.orient.domain.OPoint
 import com.kerz.orient.domain.Person
 import com.tinkerpop.blueprints.impls.orient.OrientGraph
@@ -24,7 +25,8 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraph
 @RunWith(SpringJUnit4ClassRunner)
 @SpringApplicationConfiguration(classes = [
   OrientRepositoryConfiguration, 
-  PersonRepository
+  PersonRepository,
+  PersonSqlRepository
   ]
 )
 class OrientRepositoryTest {
@@ -41,12 +43,12 @@ class OrientRepositoryTest {
   
   @Autowired
   PersonRepository personRepository
-
+  
+  @Autowired
+  PersonSqlRepository personSqlRepository
+  
   @Before
   void setUp() {
-//    vertexTypes.each {
-//      oHelper.createVertexType(it.simpleName)
-//    }
     oHelper.submitSql('drop class person unsafe')
     oHelper.submitSql('create class Person extends V')
     oHelper.submitSql('create property person.point embedded OPoint')
@@ -54,9 +56,7 @@ class OrientRepositoryTest {
 
   @After
   void tearDown() {
-    vertexTypes.each {
-      //oHelper.dropVertexType(it.simpleName)
-    }
+    //g.commit()
   }
 
 //  @Test
@@ -70,50 +70,62 @@ class OrientRepositoryTest {
 //    assertNull(w2?.whatsit)
 //  }
   
-  @Test
-  void shouldSort() {
-    def peep1 = personRepository.save(new Person(firstName: 'abe', lastName: 'beck'))
-    def peep2 = personRepository.save(new Person(firstName: 'andy', lastName: 'smith'))
-    def peep3 = personRepository.save(new Person(firstName: 'fred', lastName: 'smith'))
-    def peep4 = personRepository.save(new Person(firstName: 'jon', lastName: 'jones'))
-    def peep5 = personRepository.save(new Person(firstName: 'jon', lastName: 'zephyr'))
+  void shouldSort(def repo) {
+    def peep1 = repo.save(new Person(firstName: 'abe', lastName: 'beck'))
+    def peep2 = repo.save(new Person(firstName: 'andy', lastName: 'smith'))
+    def peep3 = repo.save(new Person(firstName: 'fred', lastName: 'smith'))
+    def peep4 = repo.save(new Person(firstName: 'jon', lastName: 'jones'))
+    def peep5 = repo.save(new Person(firstName: 'jon', lastName: 'zephyr'))
+    g.commit()
     
     def sort = new Sort(Sort.Direction.ASC, 'firstName')
-    def people = personRepository.findAll(sort)
+    def people = repo.findAll(sort)
     assertEquals(5, people.size)
     assertEquals(peep1, people[0])
     assertEquals(peep3, people[2])
     
     sort = new Sort(Sort.Direction.DESC, 'firstName')
-    people = personRepository.findAll(sort)
+    people = repo.findAll(sort)
     assertEquals(peep2, people[3])
     assertEquals(peep1, people[4])
     
     sort = new Sort(Sort.Direction.ASC, 'lastName')
-    people = personRepository.findAll(sort)
+    people = repo.findAll(sort)
     assertEquals(peep1, people[0])
     assertEquals(peep4, people[1])
     assertEquals(peep5, people[4])
     
     sort = new Sort(Sort.Direction.ASC, 'lastName').and(new Sort(Sort.Direction.DESC, 'firstName'))
-    people = personRepository.findAll(sort)
+    people = repo.findAll(sort)
     assertEquals(peep3, people[2])
     assertEquals(peep2, people[3])
     
-    personRepository.deleteAll()
-    assertEquals(0, personRepository.count())
+    repo.deleteAll()
+    g.commit()
+    
+    assertEquals(0, repo.count())
   }
   
   @Test
-  void shouldPage() {
-    def peep1 = personRepository.save(new Person(firstName: 'abe', lastName: 'beck'))
-    def peep2 = personRepository.save(new Person(firstName: 'andy', lastName: 'smith'))
-    def peep3 = personRepository.save(new Person(firstName: 'fred', lastName: 'smith'))
-    def peep4 = personRepository.save(new Person(firstName: 'jon', lastName: 'jones'))
-    def peep5 = personRepository.save(new Person(firstName: 'jon', lastName: 'zephyr'))
+  void shouldSort() {
+    shouldSort(personRepository)
+  }
+  
+  @Test
+  void shouldSortSql() {
+    shouldSort(personSqlRepository)
+  }
+  
+  void shouldPage(def repo) {
+    def peep1 = repo.save(new Person(firstName: 'abe', lastName: 'beck'))
+    def peep2 = repo.save(new Person(firstName: 'andy', lastName: 'smith'))
+    def peep3 = repo.save(new Person(firstName: 'fred', lastName: 'smith'))
+    def peep4 = repo.save(new Person(firstName: 'jon', lastName: 'jones'))
+    def peep5 = repo.save(new Person(firstName: 'jon', lastName: 'zephyr'))
+    g.commit()
     
     Pageable pageable = new PageRequest(0, 2, Sort.Direction.ASC, 'firstName')
-    Page<Person> page = personRepository.findAll(pageable)
+    Page<Person> page = repo.findAll(pageable)
 
     assertEquals(5, page.totalElements)
     assertEquals(2, page.size)
@@ -122,40 +134,64 @@ class OrientRepositoryTest {
     assertEquals(peep1, page.content[0])
     assertEquals(peep2, page.content[1])
     
-    page = personRepository.findAll(page.nextPageable())
+    page = repo.findAll(page.nextPageable())
     
     assertEquals(2, page.content.size())
     assertEquals(peep3, page.content[0])
     assertEquals(peep4, page.content[1])
     
-    page = personRepository.findAll(page.nextPageable())
+    page = repo.findAll(page.nextPageable())
     
     assertEquals(1, page.content.size())
     assertEquals(peep5, page.content[0])
     
     assertNull(page.nextPageable())
     
-    personRepository.deleteAll()
-    assertEquals(0, personRepository.count())
+    repo.deleteAll()
+    g.commit()
+    
+    assertEquals(0, repo.count())
+  }
+  
+  @Test
+  void shouldPage() {
+    shouldPage(personRepository)
+  }
+  
+  @Test
+  void shouldPageSql() {
+    shouldPage(personSqlRepository)
+  }
+  
+  void shouldCrud(def repo) {
+    def person = repo.save(new Person(firstName: 'fred', lastName: 'smith', address: '151 Farmington Ave, Hartford CT, 06108'))
+    oHelper.g.commit()
+    assertNotNull(person.id)
+    log.debug("person.id=$person.id")
+    def person2 = repo.findOne(person.id)
+    assertEquals(person, person2)
+    assertEquals(1, repo.count())
+    person2.firstName = 'frank'
+    repo.save(person2)
+    oHelper.g.commit()
+    person2 = repo.findOne(person.id)
+    assertEquals('frank', person2.firstName)
+    repo.delete(person)
+    oHelper.g.commit()
+    assertEquals(0, repo.count())
   }
   
   @Test
   void shouldCrud() {
-    def person = personRepository.save(new Person(firstName: 'fred', lastName: 'smith', address: '151 Farmington Ave, Hartford CT, 06108'))
-    assertNotNull(person.id)
-    def person2 = personRepository.findOne(person.id)
-    assertEquals(person, person2)
-    assertEquals(1, personRepository.count())
-    person2.firstName = 'frank'
-    personRepository.save(person2)
-    person2 = personRepository.findOne(person.id)
-    assertEquals('frank', person2.firstName)
-    personRepository.delete(person)
-    assertEquals(0, personRepository.count())
+    shouldCrud(personRepository)
   }
   
   @Test
-  void shouldSaveEmbedded() {
+  void shouldCrudSql() {
+    shouldCrud(personSqlRepository)
+  }
+  
+  void shouldSaveEmbedded(def repo) {
     def point = new OPoint(coordinates: [1.1f, 2.2f])
     def person = personRepository.save(new Person(firstName: 'fred', lastName: 'smith', address: '151 Farmington Ave, Hartford CT, 06108', point: point))
     assertNotNull(person.id)
@@ -166,5 +202,15 @@ class OrientRepositoryTest {
     assertEquals(1, personRepository.count())
     personRepository.delete(person)
     assertEquals(0, personRepository.count())
+  }
+  
+  @Test
+  void shouldSaveEmbedded() {
+    shouldSaveEmbedded(personRepository)
+  }
+  
+  @Test
+  void shouldSaveEmbeddedSql() {
+    shouldSaveEmbedded(personSqlRepository)
   }
 }
